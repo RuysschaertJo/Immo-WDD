@@ -23,33 +23,35 @@
           <div class="col-lg-3 col-md-6 mb-2">
             <div class="form-group mt-3">
               <label class="form-label" for="gemeente">Gemeentes</label>
-              <select class="form-control" id="gemeente" name="city" multiple>
+              <select class="form-control" id="gemeente" name="city" multiple v-model="filters.city" @change="filterHouses">
                 <option :value="undefined">Maak een keuze...</option>
+                <option v-for="city in filterData.cities" :value="city.city">{{ city.city }} ({{ city.number_of_homes }})</option>
               </select>
             </div>
           </div>
           <div class="col-lg-3 col-md-6 mb-2">
             <div class="form-group mt-3">
               <label class="form-label" for="type">Type</label>
-              <select class="form-control" id="type" name="type">
+              <select class="form-control" id="type" name="type" v-model="filters.hometypeid" @change="filterHouses">
                 <option :value="undefined">Maak een keuze...</option>
+                <option v-for="homeType in filterData.homeTypes" :value="homeType.id">{{ homeType.description }}</option>
               </select>
             </div>
           </div>
           <div class="col-lg-3 col-md-6 mb-2 d-flex">
             <div class="c-input form-group mt-3 me-1">
               <label class="form-label" for="prijsmin">Prijs min.</label>
-              <input class="form-control" type="number" step="50000" id="prijsmin" name="pricemin" />
+              <input class="form-control" type="number" step="50000" id="prijsmin" name="pricemin" v-model="filters.priceMin" @change="filterHouses"/>
             </div>
             <div class="c-input form-group mt-3 ms-1">
               <label class="form-label" for="prijsmax">max.</label>
-              <input class="form-control" type="number" step="50000" id="prijsmax" name="pricemax" />
+              <input class="form-control" type="number" step="50000" id="prijsmax" name="pricemax" v-model="filters.priceMax" @change="filterHouses"/>
             </div>
           </div>
           <div class="col-lg-3 col-md-6 mb-2">
             <div class="form-group mt-3">
               <label class="form-label" for="opp">Slaapkamers min.</label>
-              <select class="form-control" id="opp" name="bedrooms">
+              <select class="form-control" id="opp" name="bedrooms" v-model="filters.bedrooms" @change="filterHouses">
                 <option :value="undefined">Maak een keuze...</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -89,7 +91,7 @@
                   </div>
                   <div class="c-pand__body">
                     <div class="pb-1 d-flex">
-                      <span class="c-pand__price">&euro; {{ house.price }}</span>
+                      <span class="c-pand__price">&euro; {{ house.price.toLocaleString() }}</span>
                     </div>
                   </div>
                   <div class="c-pand__footer">
@@ -137,13 +139,38 @@ export default {
   setup() {
     const houses = ref();
     const loading = ref(true);
+    const filterData = ref({
+      cities: [],
+      homeTypes: [],
+    });
+
     const getHouses = async function () {
-      const data = await fetch(`https://realestate-api.fgmnts.be/api/v1/homes/?nopagination=true`).then((r) => r.json());
+      const { data } = await getData(`https://realestate-api.fgmnts.be/api/v1/homes/?nopagination=true`);
       console.log(data);
 
-      houses.value = data.data;
+      houses.value = data;
       loading.value = false;
     };
+
+    const getData = function (url) {
+      return fetch(url).then(function (response) {
+        return response.json();
+      });
+    };
+
+    const fillFilters = async function () {
+      const cities = await getData(`https://realestate-api.fgmnts.be/api/v1/cities/`);
+      filterData.value.cities = cities.data;
+
+      const homeTypes = await getData(`https://realestate-api.fgmnts.be/api/v1/hometypes/`);
+      filterData.value.homeTypes = homeTypes.data;
+    };
+
+    // const getCities = async function () {
+    //   const data = await fetch(`https://realestate-api.fgmnts.be/api/v1/homes/?nopagination=true`).then((r) => r.json());
+
+    //   cities.value = data.data;
+    // };
 
     const filters = ref({
       city: [],
@@ -153,8 +180,15 @@ export default {
       bedrooms: undefined,
     });
 
+    const filterHouses = function () {
+      //https://realestate-api.fgmnts.be/api/v1/homes/search/?startprice=0&endprice=500000&city=De%20Panne%2CAdinkerke&bedrooms=4&hometypeid=1&nopagination=true&page=1
+      //Maak een url aan de hand van wat we selecteren.
+      console.log(filters.value);
+    };
+
     getHouses();
-    return { AppHeader, AppFooter, loading, houses, filters };
+    fillFilters();
+    return { loading, houses, filters, filterData, filterHouses };
   },
 };
 </script>
